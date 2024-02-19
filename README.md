@@ -16,7 +16,7 @@ In terms of servers that I am using/have used, the following table contains the 
 |---|---|---|---|
 | standard.tiny | 1 | 1 | [Unsuccesful] Kernel cloning from repository takes too long |
 | standard.small | 2 | 3 | [Unsuccesful] Kernel cloning from repositort takes too long |
-| standard.medium | 3 | 4 | [Succesful] Kernel and user space libaries are able to be built, but note that kernel compilation takes a **long** time |
+| standard.medium | 3 | 4 | [Unsuccesful] Kernel and user space libaries are able to be built, but note that kernel compilation takes a **long** time. However, once restarting, there is not enough memory to start |
 | standard.large | 4 | 8 | [Succesful] Kernel and user space libaries are able to be built, but note that kernel compilation takes a **long** time |
 
 For each of the virtual machines, I chose to use Ubuntu 22.04 as the base image/operating system.
@@ -127,4 +127,95 @@ Using `nproc` check how many processing units are available for the compilation,
 sudo make -j 4
 ```
 
-Depending on the number of available procesing units, this compilation may take a while. 
+Depending on the number of available procesing units, this compilation may take a while, e.g., 3 to 4 hours.
+
+Install the modules.
+
+```sh
+sudo make -j 4 modules_install
+```
+
+Install the kernel.
+
+```sh
+sudo make -j 4 install
+```
+
+6. Reboot the server and login again.
+
+```sh
+sudo shutdown -r now
+```
+
+7. Check that the new kernel and the rdma_rxe module were installed.
+
+```sh
+uname -r
+```
+
+![uname check](images/uname_check.png)
+
+```sh
+modinfo rdma_rxe
+```
+
+![rdma rxe check](images/rdma_rxe_check.png)
+
+If it looks similar then the kernel and module were correctly configured.
+
+## User Space Libraries Installation
+
+According to the NVIDIA article, the user space libraries which support Soft-RoCE have not been distributed and requires installation. The article provides instructions for manual building and installation from the [rdma-core repository](https://github.com/linux-rdma/rdma-core). However, there appears to be a pre-compiled version available through `apt-get`.  
+
+1. Install some pre-requisites.
+
+```sh
+sudo apt-get install build-essential cmake gcc libudev-dev libnl-3-dev libnl-route-3-dev ninja-build pkg-config valgrind python3-dev cython3 python3-docutils pandoc
+```
+
+2. Install `rdma-core`.
+
+```sh
+sudo apt-get install rdma-core
+```
+
+## Usage and testing
+Software RDMA should now be made available on an existing (Ethernet) interface using one of the available drivers. 
+
+1. Check which interfaces are available and especially the name of the interface.
+
+```sh
+ip link
+```
+
+![ip info](images/ip_info.png)
+
+In my example, the Ethernet interface is called `ens3`.
+
+2. Now an RXE device should be created over the network interfae, e.g., `ens3`.
+
+```sh
+sudo rdma link add rxe_ens3 type rxe netdev ens3
+```
+
+Where `rxe_ens3` is the *name* of the device, `rxe` is the type of the driver, and `ens3` is the network interfacce in question. 
+
+3. The link command provides no output so the status command can be called to display the current configuration. 
+
+```sh
+rdma link
+```
+
+![rdma link](images/rdma_link.png)
+
+Alternatively, `ibv_devices` can be used to verify the device was created succesfully but this requires some tools to be installed.
+
+```sh
+sudo apt-get install ibverbs-utils
+```
+
+![ibv devices](images/ibv_devices.png)
+
+---
+
+Now, this installation should be replicated on one (or more) servers/virtual machines which are connected by Ethernet. This can be done through following the instructions again, or by creating a snapshot of the server and deploying that.  
