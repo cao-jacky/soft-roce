@@ -15,8 +15,8 @@ In terms of servers that I am using/have used, the following table contains the 
 | Flavour | Cores |  Memory (GB) | Notes |
 |---|---|---|---|
 | standard.tiny | 1 | 1 | [Unsuccesful] Kernel cloning from repository takes too long |
-| standard.small | 2 | 3 | [Unsuccesful] Kernel cloning from repositort takes too long |
-| standard.medium | 3 | 4 | [Unsuccesful] Kernel and user space libaries are able to be built, but note that kernel compilation takes a **long** time. However, once restarting, there is not enough memory to start |
+| standard.small | 2 | 3 | [Unsuccesful] Kernel cloning from repository takes too long |
+| standard.medium | 3 | 4 | [Unsuccesful] Kernel and user space libaries are able to be built, but kernel compilation takes a **long** time. However, once restarting, there is not enough memory to start |
 | standard.large | 4 | 8 | [Succesful] Kernel and user space libaries are able to be built, but note that kernel compilation takes a **long** time |
 
 For each of the virtual machines, I chose to use Ubuntu 22.04 as the base image/operating system.
@@ -163,7 +163,7 @@ modinfo rdma_rxe
 
 If it looks similar then the kernel and module were correctly configured.
 
-## User Space Libraries Installation
+## User space libraries installation
 
 According to the NVIDIA article, the user space libraries which support Soft-RoCE have not been distributed and requires installation. The article provides instructions for manual building and installation from the [rdma-core repository](https://github.com/linux-rdma/rdma-core). However, there appears to be a pre-compiled version available through `apt-get`.  
 
@@ -219,3 +219,120 @@ sudo apt-get install ibverbs-utils
 ---
 
 Now, this installation should be replicated on one (or more) servers/virtual machines which are connected by Ethernet. This can be done through following the instructions again, or by creating a snapshot of the server and deploying that.  
+
+With another instance created, the connection between both servers can be tested. Some tools are needed for that. 
+
+### InfiniBand Testing
+First of all, we will test using InfiniBand. The following commands are to be run on both/all servers unless specified otherwise. 
+
+```sh
+sudo apt-get install perftest
+```
+ 
+The IPs of the machines are needed, so we need `net-tools`.
+
+```sh
+sudo apt-get install net-tools
+```
+
+`ifconfig` can be run on both servers to obtain their IPs.
+
+```
+server_1: 192.168.1.8
+server_2: 192.168.1.14
+```
+
+Now, `server_1` is chosen to act as the main "server" for the bandwidth test, so, run:
+
+```sh
+ib_send_bw
+```
+
+![infiniband bandwidth test](images/ib_send_bw1.png)
+
+Then, `server_2` will act as the "client". The same InfiniBand command will be executed, but with the parameter of `server_1`, i.e., `192.168.1.8`.
+
+```sh
+ib_send_bw 192.168.1.8
+```
+
+`server_2` will then connect to `server_1` using the created `rxe` interface, and with this InfiniBand command, will perform a bandwidth test. The following images correspond to `server_1` and `server_2`, respectively. 
+
+![ib_send_bw server_1](images/ib_send_bw2.png)
+
+![ib_send_bw server_2](images/ib_send_bw3.png)
+
+We can see several things using this tool:
+1. The MTU sending size of the link connection.
+2. That the `Link` is indeed Ethernet.
+3. And the statistics of the bandwidth test performed, e.g., peak, average, and message rates.
+
+Another InfiBand tool is `ibv_rc_pingpong` which can be used to perform ping/similar bandwidth measurements as the above `ib_send_bw` tool.
+
+On `server_1` or the "server", run the following command, specifying the name of the `rxe` device/interface, and the parameter `-g`. This latter parameter refers to the "GID", and should be accessible through a [script](https://enterprise-support.nvidia.com/s/article/understanding-show-gids-script). However, that is not available so I used trial and error instead, i.e., starting from `-g 0` and then to `-g 1`.
+
+```sh
+ibv_rc_pingpong -d rxe_ens3 -g 1
+```
+
+`server_2` should again have a similar command where the GID parameter is also specified, as well as the address of `server_1`.
+
+```sh
+ibv_rc_pingpong -d rxe_ens3 -g 1 192.168.1.8
+```
+
+The following images correspond to the ping test working on `server_1` and `server_2`, respectively. 
+
+![ibv_rc_pingpong server_1](images/ibv_rc_pingpong1.png)
+
+![ibv_rc_pingpong server_2](images/ibv_rc_pingpong2.png)
+
+### rping testing
+Another tool is `rping` which can be used to perform ping-like tests over RDMA.  
+
+```sh
+sudo apt install rdmacm-utils
+```
+
+Then on `server_1` which will act as the "server", provide the `rping` command with parameters specifying that it will act as a server and also its own address.
+
+```sh
+rping -s -a 192.168.1.8
+```
+
+On `server_2` a similar command is run with changes as it will act as a "client" and 10 ping messages will be sent.
+
+```sh
+rping -c -a 192.168.1.8 -C 10 -v
+```
+
+The following images correspond to `server_1` and `server_2`, respectively.
+
+![rping server_1](images/rping1.png)
+
+![rping server_2](images/rping2.png)
+
+### qperf testing
+Another tool is `qperf` and is used to test bandwidth and other metrics.
+
+```sh
+sudo apt install qperf
+```
+
+On `server_1`, `qperf` can be run simply by itself without any parameters.
+
+```sh
+qperf
+```
+
+Then on `server_2`, a few more parameters are added, such as enabling RDMA connection manager, specfying the server address, and for a bandwidth test. This latter parameter can be changed according to the type of test wanted, other tests can be checked using `qperf --help examples`.
+
+```sh
+qperf -cm 1 192.168.1.8 rc_bw
+```
+
+The following images are of `server_1` and `server_2`, respectively. 
+
+![qperf server1](images/qperf1.png)
+
+![qperf server2](images/qperf2.png)
