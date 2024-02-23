@@ -1,5 +1,5 @@
 # soft-roce
-Using the [following](https://enterprise-support.nvidia.com/s/article/howto-configure-soft-roce) NVIDIA article on deploying Soft-RoCE on Ethernet-connected infrastructure. This repository and README.md contains the steps that I have followed and used to get the software implementation of RDMA transport working on CSC (i.e., Finnish state IT and computing infrastruture) infrastructure. 
+Using the [following](https://enterprise-support.nvidia.com/s/article/howto-configure-soft-roce) NVIDIA article on deploying Soft-RoCE on Ethernet-connected infrastructure. This repository and README.md contains the steps that I have followed and used to get the software implementation of RDMA transport working on CSC (i.e., Finnish state IT and computing infrastruture) infrastructure.
 
 The NVIDIA article has some errors/instructions which do not work and have been changed in this documentation.
 
@@ -8,9 +8,9 @@ To get Soft-RoCE running you need to configure and install,
 2. User space libraries which support Soft-RoCE itself
 
 ## Installation
-As described in the NVIDIA document, both kernel and user space libraries are needed on both servers. 
+As described in the NVIDIA document, both kernel and user space libraries are needed on both servers.
 
-In terms of servers that I am using/have used, the following table contains the tested CSC virtual machine flavours and whether they worked or not. 
+In terms of servers that I am using/have used, the following table contains the tested CSC virtual machine flavours and whether they worked or not.
 
 | Flavour | Cores |  Memory (GB) | Notes |
 |---|---|---|---|
@@ -43,7 +43,7 @@ cd linux
 sudo cp /boot/config-$(uname -r)* .config
 ```
 
-Before configuring the kernel, there are some packages which need to be installed before running the `make` command. 
+Before configuring the kernel, there are some packages which need to be installed before running the `make` command.
 
 ```sh
 sudo apt-get install make gcc libncurses-dev flex bison
@@ -67,11 +67,11 @@ This window will open:
     5. Using the right arrow key, move to the option `< Save >` and press the `Enter` key.
     6. The filename should be left as `.config` and the `Enter` key can be pressed to select `<  Ok  >`.
     7. The `Enter` key can be pressed again to select `< Exit >`.
-    8. Using the right arrow key, select `< Exit >` and press the `Enter` key until the wizard is exited. This might require you to re-selected `< Exit >`, so do not spam the `Enter` key all at once. 
+    8. Using the right arrow key, select `< Exit >` and press the `Enter` key until the wizard is exited. This might require you to re-selected `< Exit >`, so do not spam the `Enter` key all at once.
 
 ![kernel configuration window with Soft-RoCE driver selected](images/kernel_configuration2.png)
 
-4. With the kernel configured, steps can be taken towards compiling it. 
+4. With the kernel configured, steps can be taken towards compiling it.
 
 There are some additional libraries which need to be installed.
 
@@ -85,9 +85,9 @@ To prevent the following make error during compilation, several steps need to be
 make[3]: *** No rule to make target 'debian/canonical-certs.pem', needed by 'certs/x509_certificate_list'.  Stop.
 ```
 
-These steps are from [here](https://stackoverflow.com/questions/67670169/compiling-kernel-gives-error-no-rule-to-make-target-debian-certs-debian-uefi-ce). 
+These steps are from [here](https://stackoverflow.com/questions/67670169/compiling-kernel-gives-error-no-rule-to-make-target-debian-certs-debian-uefi-ce).
 
-```sh 
+```sh
 sudo mkdir -p /usr/local/src/debian
 sudo apt-get install linux-source
 sudo cp -v /usr/src/linux-source-*/debian/canonical-*.pem /usr/local/src/debian/
@@ -104,12 +104,12 @@ The first variable to change is `CONFIG_SYSTEM_TRUSTED_KEYS`, from,
 CONFIG_SYSTEM_TRUSTED_KEYS="debian/canonical-certs.pem"
 ```
 
-to, 
+to,
 ```conf
 CONFIG_SYSTEM_TRUSTED_KEYS="/usr/local/src/debian/canonical-certs.pem"
 ```
 
-Then, the second variable to change is `CONFIG_SYSTEM_REVOCATION_KEYS`, from, 
+Then, the second variable to change is `CONFIG_SYSTEM_REVOCATION_KEYS`, from,
 ```conf
 CONFIG_SYSTEM_REVOCATION_KEYS="debian/canonical-revoked-certs.pem"
 ```
@@ -119,9 +119,9 @@ to
 CONFIG_SYSTEM_REVOCATION_KEYS="/usr/local/src/debian/canonical-revoked-certs.pem"
 ```
 
-5. Now the kernel can be compiled. 
+5. Now the kernel can be compiled.
 
-Using `nproc` check how many processing units are available for the compilation, e.g., `4`. Then the kernel can be compiled. NB: replace 4 in the following commands with whatever output `nproc` gives. 
+Using `nproc` check how many processing units are available for the compilation, e.g., `4`. Then the kernel can be compiled. NB: replace 4 in the following commands with whatever output `nproc` gives.
 
 ```sh
 sudo make -j 4
@@ -165,7 +165,7 @@ If it looks similar then the kernel and module were correctly configured.
 
 ## User space libraries installation
 
-According to the NVIDIA article, the user space libraries which support Soft-RoCE have not been distributed and requires installation. The article provides instructions for manual building and installation from the [rdma-core repository](https://github.com/linux-rdma/rdma-core). However, there appears to be a pre-compiled version available through `apt-get`.  
+According to the NVIDIA article, the user space libraries which support Soft-RoCE have not been distributed and requires installation. The article provides instructions for manual building and installation from the [rdma-core repository](https://github.com/linux-rdma/rdma-core). However, there appears to be a pre-compiled version available through `apt-get`.
 
 1. Install some pre-requisites.
 
@@ -180,7 +180,7 @@ sudo apt-get install rdma-core
 ```
 
 ## Usage and testing
-Software RDMA should now be made available on an existing (Ethernet) interface using one of the available drivers. 
+Software RDMA should now be made available on an existing (Ethernet) interface using one of the available drivers.
 
 1. Check which interfaces are available and especially the name of the interface.
 
@@ -198,9 +198,9 @@ In my example, the Ethernet interface is called `ens3`.
 sudo rdma link add rxe_ens3 type rxe netdev ens3
 ```
 
-Where `rxe_ens3` is the *name* of the device, `rxe` is the type of the driver, and `ens3` is the network interfacce in question. 
+Where `rxe_ens3` is the *name* of the device, `rxe` is the type of the driver, and `ens3` is the network interfacce in question.
 
-3. The link command provides no output so the status command can be called to display the current configuration. 
+3. The link command provides no output so the status command can be called to display the current configuration.
 
 ```sh
 rdma link
@@ -218,17 +218,17 @@ sudo apt-get install ibverbs-utils
 
 ---
 
-Now, this installation should be replicated on one (or more) servers/virtual machines which are connected by Ethernet. This can be done through following the instructions again, or by creating a snapshot of the server and deploying that.  
+Now, this installation should be replicated on one (or more) servers/virtual machines which are connected by Ethernet. This can be done through following the instructions again, or by creating a snapshot of the server and deploying that.
 
-With another instance created, the connection between both servers can be tested. Some tools are needed for that. 
+With another instance created, the connection between both servers can be tested. Some tools are needed for that.
 
 ### InfiniBand Testing
-First of all, we will test using InfiniBand. The following commands are to be run on both/all servers unless specified otherwise. 
+First of all, we will test using InfiniBand. The following commands are to be run on both/all servers unless specified otherwise.
 
 ```sh
 sudo apt-get install perftest
 ```
- 
+
 The IPs of the machines are needed, so we need `net-tools`.
 
 ```sh
@@ -256,7 +256,7 @@ Then, `server_2` will act as the "client". The same InfiniBand command will be e
 ib_send_bw 192.168.1.8
 ```
 
-`server_2` will then connect to `server_1` using the created `rxe` interface, and with this InfiniBand command, will perform a bandwidth test. The following images correspond to `server_1` and `server_2`, respectively. 
+`server_2` will then connect to `server_1` using the created `rxe` interface, and with this InfiniBand command, will perform a bandwidth test. The following images correspond to `server_1` and `server_2`, respectively.
 
 ![ib_send_bw server_1](images/ib_send_bw2.png)
 
@@ -281,14 +281,14 @@ ibv_rc_pingpong -d rxe_ens3 -g 1
 ibv_rc_pingpong -d rxe_ens3 -g 1 192.168.1.8
 ```
 
-The following images correspond to the ping test working on `server_1` and `server_2`, respectively. 
+The following images correspond to the ping test working on `server_1` and `server_2`, respectively.
 
 ![ibv_rc_pingpong server_1](images/ibv_rc_pingpong1.png)
 
 ![ibv_rc_pingpong server_2](images/ibv_rc_pingpong2.png)
 
 ### rping testing
-Another tool is `rping` which can be used to perform ping-like tests over RDMA.  
+Another tool is `rping` which can be used to perform ping-like tests over RDMA.
 
 ```sh
 sudo apt install rdmacm-utils
@@ -331,7 +331,7 @@ Then on `server_2`, a few more parameters are added, such as enabling RDMA conne
 qperf -cm 1 192.168.1.8 rc_bw
 ```
 
-The following images are of `server_1` and `server_2`, respectively. 
+The following images are of `server_1` and `server_2`, respectively.
 
 ![qperf server1](images/qperf1.png)
 
